@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Flashcards">
-    <title>Flashcards - Учебные карточки</title>
+    <title>Flashcards</title>
     <style>
         * {
             margin: 0;
@@ -140,12 +140,7 @@
             border-radius: 30px;
             cursor: pointer;
             font-size: 14px;
-            transition: all 0.3s;
             color: #555;
-        }
-
-        .btn:hover {
-            background: #f5f5f5;
         }
 
         .btn-primary {
@@ -348,10 +343,6 @@
             font-size: 12px;
         }
 
-        .file-input-label:hover {
-            background: #e0e0e0;
-        }
-
         input[type="file"] {
             display: none;
         }
@@ -419,6 +410,58 @@
         let currentCardIndex = 0;
         let editingCardId = null;
         let nextId = 1;
+        
+        const SESSION_KEY = 'flashcards_session';
+
+        function saveSession() {
+            const sessionData = {
+                unknownCardsIds: unknownCards.map(c => c.id),
+                currentQueueIds: currentQueue.map(c => c.id),
+                currentCardIndex: currentCardIndex
+            };
+            localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+        }
+
+        function loadSession() {
+            const savedSession = localStorage.getItem(SESSION_KEY);
+            if (savedSession) {
+                try {
+                    const sessionData = JSON.parse(savedSession);
+                    
+                    if (sessionData.unknownCardsIds && sessionData.unknownCardsIds.length > 0) {
+                        unknownCards = allCards.filter(card => sessionData.unknownCardsIds.includes(card.id));
+                    } else {
+                        unknownCards = [];
+                    }
+                    
+                    if (sessionData.currentQueueIds && sessionData.currentQueueIds.length > 0) {
+                        currentQueue = allCards.filter(card => sessionData.currentQueueIds.includes(card.id));
+                        currentCardIndex = sessionData.currentCardIndex || 0;
+                        
+                        if (currentCardIndex >= currentQueue.length) {
+                            currentCardIndex = 0;
+                        }
+                    } else {
+                        currentQueue = [...allCards];
+                        shuffleArray(currentQueue);
+                        currentCardIndex = 0;
+                    }
+                    
+                    return true;
+                } catch (e) {
+                    console.error('Ошибка загрузки сессии:', e);
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        function shuffleArray(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+        }
 
         function loadCards() {
             const saved = localStorage.getItem('flashcards_data');
@@ -441,7 +484,14 @@
                 nextId = 11;
                 saveCards();
             }
-            startNewRound();
+            
+            const sessionLoaded = loadSession();
+            
+            if (!sessionLoaded || currentQueue.length === 0) {
+                startNewRound();
+            } else {
+                renderCurrentCard();
+            }
         }
 
         function saveCards() {
@@ -486,12 +536,10 @@
 
         function startNewRound() {
             currentQueue = [...allCards];
-            for (let i = currentQueue.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [currentQueue[i], currentQueue[j]] = [currentQueue[j], currentQueue[i]];
-            }
+            shuffleArray(currentQueue);
             currentCardIndex = 0;
             unknownCards = [];
+            saveSession();
             renderCurrentCard();
         }
 
@@ -503,12 +551,10 @@
             }
             
             currentQueue = [...unknownCards];
-            for (let i = currentQueue.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [currentQueue[i], currentQueue[j]] = [currentQueue[j], currentQueue[i]];
-            }
+            shuffleArray(currentQueue);
             currentCardIndex = 0;
             unknownCards = [];
+            saveSession();
             renderCurrentCard();
             showNotification(`📚 Повторяем ${currentQueue.length} карточек, которые вы не знали`);
         }
@@ -517,6 +563,7 @@
             if (currentQueue.length === 0) return;
             
             currentQueue.splice(currentCardIndex, 1);
+            saveSession();
             
             if (currentQueue.length > 0) {
                 if (currentCardIndex >= currentQueue.length) {
@@ -546,6 +593,7 @@
             }
             
             currentQueue.splice(currentCardIndex, 1);
+            saveSession();
             
             if (currentQueue.length > 0) {
                 if (currentCardIndex >= currentQueue.length) {
@@ -666,6 +714,7 @@
                 [currentQueue[i], currentQueue[j]] = [currentQueue[j], currentQueue[i]];
             }
             currentCardIndex = 0;
+            saveSession();
             renderCurrentCard();
             showNotification('🎲 Карточки перемешаны');
         }
