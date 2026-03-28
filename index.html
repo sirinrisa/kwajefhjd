@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Flashcards">
-    <title>Flashcards</title>
+    <title>Flashcards - Учебные карточки</title>
     <style>
         * {
             margin: 0;
@@ -326,26 +326,6 @@
                 opacity: 1;
             }
         }
-
-        .import-export {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 15px;
-        }
-
-        .file-input-label {
-            background: #f0f0f0;
-            border: 1px solid #ddd;
-            padding: 8px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        input[type="file"] {
-            display: none;
-        }
     </style>
 </head>
 <body>
@@ -371,14 +351,6 @@
                 </div>
                 <button type="submit">✨ Добавить карточку</button>
             </form>
-            
-            <div class="import-export">
-                <label class="file-input-label">
-                    📂 Импорт JSON
-                    <input type="file" id="importFile" accept=".json">
-                </label>
-                <button class="btn" onclick="exportCards()">💾 Экспорт JSON</button>
-            </div>
         </div>
     </div>
 
@@ -412,6 +384,7 @@
         let nextId = 1;
         
         const SESSION_KEY = 'flashcards_session';
+        const CARDS_KEY = 'flashcards_data';
 
         function saveSession() {
             const sessionData = {
@@ -427,17 +400,14 @@
             if (savedSession) {
                 try {
                     const sessionData = JSON.parse(savedSession);
-                    
                     if (sessionData.unknownCardsIds && sessionData.unknownCardsIds.length > 0) {
                         unknownCards = allCards.filter(card => sessionData.unknownCardsIds.includes(card.id));
                     } else {
                         unknownCards = [];
                     }
-                    
                     if (sessionData.currentQueueIds && sessionData.currentQueueIds.length > 0) {
                         currentQueue = allCards.filter(card => sessionData.currentQueueIds.includes(card.id));
                         currentCardIndex = sessionData.currentCardIndex || 0;
-                        
                         if (currentCardIndex >= currentQueue.length) {
                             currentCardIndex = 0;
                         }
@@ -446,10 +416,8 @@
                         shuffleArray(currentQueue);
                         currentCardIndex = 0;
                     }
-                    
                     return true;
                 } catch (e) {
-                    console.error('Ошибка загрузки сессии:', e);
                     return false;
                 }
             }
@@ -463,28 +431,70 @@
             }
         }
 
-        function loadCards() {
-            const saved = localStorage.getItem('flashcards_data');
+        async function loadCardsFromJSON() {
+            try {
+                const response = await fetch('questions.json');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.cards && Array.isArray(data.cards)) {
+                        allCards = data.cards;
+                        nextId = Math.max(...allCards.map(c => c.id), 0) + 1;
+                        saveCardsToLocal();
+                        showNotification('✅ Карточки загружены из questions.json');
+                        return true;
+                    }
+                }
+            } catch (error) {
+                console.log('Файл questions.json не найден, используем стандартные карточки');
+            }
+            return false;
+        }
+
+        function saveCardsToLocal() {
+            localStorage.setItem(CARDS_KEY, JSON.stringify(allCards));
+        }
+
+        function loadCardsFromLocal() {
+            const saved = localStorage.getItem(CARDS_KEY);
             if (saved) {
                 allCards = JSON.parse(saved);
                 nextId = Math.max(...allCards.map(c => c.id), 0) + 1;
-            } else {
-                allCards = [
-                    { id: 1, question: "Что такое Python?", answer: "Python - это высокоуровневый язык программирования" },
-                    { id: 2, question: "Что такое SQL?", answer: "SQL - язык структурированных запросов" },
-                    { id: 3, question: "Что такое HTML?", answer: "HTML - язык гипертекстовой разметки" },
-                    { id: 4, question: "Что такое CSS?", answer: "CSS - каскадные таблицы стилей" },
-                    { id: 5, question: "Что такое JavaScript?", answer: "JavaScript - язык программирования для веб-страниц" },
-                    { id: 6, question: "Что такое React?", answer: "React - библиотека для создания интерфейсов" },
-                    { id: 7, question: "Что такое Node.js?", answer: "Node.js - среда выполнения JavaScript на сервере" },
-                    { id: 8, question: "Что такое Git?", answer: "Git - система контроля версий" },
-                    { id: 9, question: "Что такое Docker?", answer: "Docker - платформа для контейнеризации" },
-                    { id: 10, question: "Что такое Flask?", answer: "Flask - микрофреймворк для Python" }
-                ];
-                nextId = 11;
-                saveCards();
+                return true;
+            }
+            return false;
+        }
+
+        function setDefaultCards() {
+            allCards = [
+                { id: 1, question: "Что такое Python?", answer: "Python - это высокоуровневый язык программирования" },
+                { id: 2, question: "Что такое SQL?", answer: "SQL - язык структурированных запросов" },
+                { id: 3, question: "Что такое HTML?", answer: "HTML - язык гипертекстовой разметки" },
+                { id: 4, question: "Что такое CSS?", answer: "CSS - каскадные таблицы стилей" },
+                { id: 5, question: "Что такое JavaScript?", answer: "JavaScript - язык программирования для веб-страниц" },
+                { id: 6, question: "Что такое React?", answer: "React - библиотека для создания интерфейсов" },
+                { id: 7, question: "Что такое Node.js?", answer: "Node.js - среда выполнения JavaScript на сервере" },
+                { id: 8, question: "Что такое Git?", answer: "Git - система контроля версий" },
+                { id: 9, question: "Что такое Docker?", answer: "Docker - платформа для контейнеризации" },
+                { id: 10, question: "Что такое Flask?", answer: "Flask - микрофреймворк для Python" }
+            ];
+            nextId = 11;
+            saveCardsToLocal();
+        }
+
+        async function initCards() {
+            // Сначала пытаемся загрузить из JSON файла
+            const loadedFromJSON = await loadCardsFromJSON();
+            
+            if (!loadedFromJSON) {
+                // Если JSON нет, пробуем загрузить из localStorage
+                const loadedFromLocal = loadCardsFromLocal();
+                if (!loadedFromLocal) {
+                    // Если и там ничего нет, используем стандартные
+                    setDefaultCards();
+                }
             }
             
+            // Пытаемся загрузить сохраненную сессию
             const sessionLoaded = loadSession();
             
             if (!sessionLoaded || currentQueue.length === 0) {
@@ -492,46 +502,6 @@
             } else {
                 renderCurrentCard();
             }
-        }
-
-        function saveCards() {
-            localStorage.setItem('flashcards_data', JSON.stringify(allCards));
-        }
-
-        function importCards(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if (data.cards && Array.isArray(data.cards)) {
-                        allCards = data.cards;
-                        nextId = Math.max(...allCards.map(c => c.id), 0) + 1;
-                        saveCards();
-                        startNewRound();
-                        showNotification('✅ Карточки успешно импортированы');
-                    } else {
-                        alert('Неверный формат файла. Ожидается { "cards": [...] }');
-                    }
-                } catch (error) {
-                    alert('Ошибка при чтении файла: ' + error.message);
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function exportCards() {
-            const data = { cards: allCards };
-            const json = JSON.stringify(data, null, 2);
-            const blob = new Blob([json], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `flashcards_${new Date().toISOString().slice(0,19)}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showNotification('💾 Карточки экспортированы');
         }
 
         function startNewRound() {
@@ -742,7 +712,7 @@
             const index = allCards.findIndex(c => c.id === editingCardId);
             if (index !== -1) {
                 allCards[index] = { ...allCards[index], question, answer };
-                saveCards();
+                saveCardsToLocal();
                 startNewRound();
                 closeEditModal();
                 showNotification('✏️ Карточка обновлена');
@@ -757,7 +727,7 @@
                 const indexInAll = allCards.findIndex(c => c.id === card.id);
                 if (indexInAll !== -1) allCards.splice(indexInAll, 1);
                 
-                saveCards();
+                saveCardsToLocal();
                 startNewRound();
                 showNotification('🗑️ Карточка удалена');
             }
@@ -776,20 +746,13 @@
             };
             
             allCards.push(newCard);
-            saveCards();
+            saveCardsToLocal();
             
             document.getElementById('question').value = '';
             document.getElementById('answer').value = '';
             
             startNewRound();
             showNotification('➕ Карточка добавлена');
-        });
-
-        document.getElementById('importFile').addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                importCards(e.target.files[0]);
-                e.target.value = '';
-            }
         });
 
         document.getElementById('editCardForm').addEventListener('submit', (e) => {
@@ -828,7 +791,7 @@
             }, 2000);
         }
 
-        loadCards();
+        initCards();
     </script>
 </body>
 </html>
