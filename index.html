@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Flashcards">
+    <title>Flashcards - Учебные карточки</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: white;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 40px;
+            font-size: 2em;
+            font-weight: 500;
+        }
+
+        .card-wrapper {
+            margin-bottom: 40px;
+            perspective: 1000px;
+        }
+
+        .card {
+            width: 100%;
+            height: 500px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            background: white;
+            border: 1px solid #e0e0e0;
+        }
+
+        .card-front {
+            background: white;
+        }
+
+        .card-back {
+            background: #fafafa;
+            transform: rotateY(180deg);
+        }
+
+        .card-front h3, .card-back h3 {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.2em;
+            font-weight: 500;
+        }
+
+        .card-front p {
+            font-size: 1.5em;
+            color: #333;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-width: 100%;
+            overflow-y: auto;
+            max-height: 70%;
+        }
+
+        .card-back p {
+            font-size: 1.1em;
+            color: #333;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-width: 100%;
+            overflow-y: auto;
+            max-height: 70%;
+        }
+
+        .flip-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #999;
+            font-size: 0.85em;
+            pointer-events: none;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 10px 24px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            color: #555;
+        }
+
+        .btn:hover {
+            background: #f5f5f5;
+        }
+
+        .btn-primary {
+            background: #333;
+            border-color: #333;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            border-color: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            border-color: #dc3545;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            border-color: #ffc107;
+            color: #333;
+        }
+
+        .counter {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .stats {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            border: 1px solid #e0e0e0;
+        }
+
+        .stat-item {
+            display: flex;
+            gap: 8px;
+            align-items: baseline;
+        }
+
+        .stat-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            color: #333;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .add-card-form {
+            background: #fafafa;
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid #e0e0e0;
+            margin-top: 40px;
+        }
+
+        .add-card-form h2 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.3em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        button[type="submit"] {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 30px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+            background: #fafafa;
+            border-radius: 20px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .progress {
+            text-align: center;
+            margin-top: 20px;
+            color: #999;
+            font-size: 0.85em;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            z-index: 1000;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .import-export {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .file-input-label {
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .file-input-label:hover {
+            background: #e0e0e0;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Флэш-карточки</h1>
+        
+        <div id="cardsContainer">
+            <div class="empty-state">
+                <p>🔄 Загрузка карточек...</p>
+            </div>
+        </div>
+        
+        <div class="add-card-form">
+            <h2>➕ Добавить новую карточку</h2>
+            <form id="addCardForm">
+                <div class="form-group">
+                    <label for="question">❓ Вопрос:</label>
+                    <input type="text" id="question" required placeholder="Введите вопрос...">
+                </div>
+                <div class="form-group">
+                    <label for="answer">💡 Ответ:</label>
+                    <textarea id="answer" required placeholder="Введите ответ..."></textarea>
+                </div>
+                <button type="submit">✨ Добавить карточку</button>
+            </form>
+            
+            <div class="import-export">
+                <label class="file-input-label">
+                    📂 Импорт JSON
+                    <input type="file" id="importFile" accept=".json">
+                </label>
+                <button class="btn" onclick="exportCards()">💾 Экспорт JSON</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeEditModal()">&times;</span>
+            <h2>✏️ Редактировать карточку</h2>
+            <form id="editCardForm">
+                <div class="form-group">
+                    <label>Вопрос:</label>
+                    <input type="text" id="editQuestion" required>
+                </div>
+                <div class="form-group">
+                    <label>Ответ:</label>
+                    <textarea id="editAnswer" required rows="5"></textarea>
+                </div>
+                <div class="modal-buttons" style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn" onclick="closeEditModal()">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let allCards = [];
+        let currentQueue = [];
+        let unknownCards = [];
+        let currentCardIndex = 0;
+        let editingCardId = null;
+        let nextId = 1;
+
+        function loadCards() {
+            const saved = localStorage.getItem('flashcards_data');
+            if (saved) {
+                allCards = JSON.parse(saved);
+                nextId = Math.max(...allCards.map(c => c.id), 0) + 1;
+            } else {
+                allCards = [
+                    { id: 1, question: "Что такое Python?", answer: "Python - это высокоуровневый язык программирования" },
+                    { id: 2, question: "Что такое SQL?", answer: "SQL - язык структурированных запросов" },
+                    { id: 3, question: "Что такое HTML?", answer: "HTML - язык гипертекстовой разметки" },
+                    { id: 4, question: "Что такое CSS?", answer: "CSS - каскадные таблицы стилей" },
+                    { id: 5, question: "Что такое JavaScript?", answer: "JavaScript - язык программирования для веб-страниц" },
+                    { id: 6, question: "Что такое React?", answer: "React - библиотека для создания интерфейсов" },
+                    { id: 7, question: "Что такое Node.js?", answer: "Node.js - среда выполнения JavaScript на сервере" },
+                    { id: 8, question: "Что такое Git?", answer: "Git - система контроля версий" },
+                    { id: 9, question: "Что такое Docker?", answer: "Docker - платформа для контейнеризации" },
+                    { id: 10, question: "Что такое Flask?", answer: "Flask - микрофреймворк для Python" }
+                ];
+                nextId = 11;
+                saveCards();
+            }
+            startNewRound();
+        }
+
+        function saveCards() {
+            localStorage.setItem('flashcards_data', JSON.stringify(allCards));
+        }
+
+        function importCards(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.cards && Array.isArray(data.cards)) {
+                        allCards = data.cards;
+                        nextId = Math.max(...allCards.map(c => c.id), 0) + 1;
+                        saveCards();
+                        startNewRound();
+                        showNotification('✅ Карточки успешно импортированы');
+                    } else {
+                        alert('Неверный формат файла. Ожидается { "cards": [...] }');
+                    }
+                } catch (error) {
+                    alert('Ошибка при чтении файла: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function exportCards() {
+            const data = { cards: allCards };
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `flashcards_${new Date().toISOString().slice(0,19)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showNotification('💾 Карточки экспортированы');
+        }
+
+        function startNewRound() {
+            currentQueue = [...allCards];
+            for (let i = currentQueue.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [currentQueue[i], currentQueue[j]] = [currentQueue[j], currentQueue[i]];
+            }
+            currentCardIndex = 0;
+            unknownCards = [];
+            renderCurrentCard();
+        }
+
+        function continueWithUnknown() {
+            if (unknownCards.length === 0) {
+                showNotification('🎉 Поздравляем! Вы выучили все карточки! 🎉');
+                renderComplete();
+                return;
+            }
+            
+            currentQueue = [...unknownCards];
+            for (let i = currentQueue.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [currentQueue[i], currentQueue[j]] = [currentQueue[j], currentQueue[i]];
+            }
+            currentCardIndex = 0;
+            unknownCards = [];
+            renderCurrentCard();
+            showNotification(`📚 Повторяем ${currentQueue.length} карточек, которые вы не знали`);
+        }
+
+        function markAsKnown() {
+            if (currentQueue.length === 0) return;
+            
+            currentQueue.splice(currentCardIndex, 1);
+            
+            if (currentQueue.length > 0) {
+                if (currentCardIndex >= currentQueue.length) {
+                    currentCardIndex = 0;
+                }
+                renderCurrentCard();
+                showNotification('✅ Знаю! Карточка удалена из очереди');
+            } else {
+                if (unknownCards.length > 0) {
+                    showNotification('📖 Круг завершен! Переходим к повторению невыученных карточек');
+                    continueWithUnknown();
+                } else {
+                    showNotification('🎉 Поздравляем! Вы выучили все карточки! 🎉');
+                    renderComplete();
+                }
+            }
+        }
+
+        function markAsUnknown() {
+            if (currentQueue.length === 0) return;
+            
+            const currentCard = currentQueue[currentCardIndex];
+            
+            const isAlreadyInUnknown = unknownCards.some(card => card.id === currentCard.id);
+            if (!isAlreadyInUnknown) {
+                unknownCards.push(currentCard);
+            }
+            
+            currentQueue.splice(currentCardIndex, 1);
+            
+            if (currentQueue.length > 0) {
+                if (currentCardIndex >= currentQueue.length) {
+                    currentCardIndex = 0;
+                }
+                renderCurrentCard();
+                showNotification('❌ Не знаю! Карточка отложена для повторения');
+            } else {
+                if (unknownCards.length > 0) {
+                    showNotification('📖 Круг завершен! Переходим к повторению невыученных карточек');
+                    continueWithUnknown();
+                } else {
+                    showNotification('🎉 Поздравляем! Вы выучили все карточки! 🎉');
+                    renderComplete();
+                }
+            }
+        }
+
+        function renderCurrentCard() {
+            const container = document.getElementById('cardsContainer');
+            
+            if (allCards.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>📭 Нет карточек</p>
+                        <p style="font-size: 0.9em;">Добавьте свою первую карточку ниже</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            if (currentQueue.length === 0) {
+                if (unknownCards.length === 0) {
+                    renderComplete();
+                } else {
+                    continueWithUnknown();
+                }
+                return;
+            }
+            
+            const card = currentQueue[currentCardIndex];
+            const totalLearned = allCards.length - unknownCards.length - (currentQueue.length - 1);
+            
+            container.innerHTML = `
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label">📚 Всего:</span>
+                        <span class="stat-value">${allCards.length}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">✅ Выучено:</span>
+                        <span class="stat-value">${totalLearned}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">🔄 В круге:</span>
+                        <span class="stat-value">${currentQueue.length}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">📝 На повторении:</span>
+                        <span class="stat-value">${unknownCards.length}</span>
+                    </div>
+                </div>
+                <div class="counter">
+                    Карточка ${currentCardIndex + 1} из ${currentQueue.length}
+                </div>
+                <div class="card-wrapper">
+                    <div class="card" onclick="toggleCard(this)">
+                        <div class="card-inner">
+                            <div class="card-front">
+                                <h3>❓ Вопрос</h3>
+                                <p>${escapeHtml(card.question)}</p>
+                                <div class="flip-hint">👇 нажмите для ответа</div>
+                            </div>
+                            <div class="card-back">
+                                <h3>💡 Ответ</h3>
+                                <p>${escapeHtml(card.answer)}</p>
+                                <div class="flip-hint">👇 нажмите для вопроса</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="controls">
+                    <button class="btn btn-success" onclick="markAsKnown()">✅ Знаю</button>
+                    <button class="btn btn-danger" onclick="markAsUnknown()">❌ Не знаю</button>
+                </div>
+                <div class="controls">
+                    <button class="btn" onclick="shuffleCurrentQueue()">🎲 Перемешать</button>
+                    <button class="btn btn-warning" onclick="openEditModal()">✏️ Редактировать</button>
+                    <button class="btn" onclick="deleteCurrentCard()">🗑️ Удалить</button>
+                </div>
+                <div class="controls">
+                    <button class="btn btn-primary" onclick="startNewRound()">🔄 Начать заново</button>
+                </div>
+                <div class="progress">
+                    💡 Кликните по карточке, чтобы перевернуть<br>
+                    ✅ Знаю - карточка уходит из текущего круга<br>
+                    ❌ Не знаю - карточка откладывается для повторения
+                </div>
+            `;
+        }
+
+        function renderComplete() {
+            const container = document.getElementById('cardsContainer');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <p>🎉 Поздравляю! 🎉</p>
+                    <p style="font-size: 1.2em; margin-top: 10px;">Вы выучили все ${allCards.length} карточек!</p>
+                    <div class="controls" style="margin-top: 30px;">
+                        <button class="btn btn-primary" onclick="startNewRound()">🔄 Начать заново</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function shuffleCurrentQueue() {
+            for (let i = currentQueue.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [currentQueue[i], currentQueue[j]] = [currentQueue[j], currentQueue[i]];
+            }
+            currentCardIndex = 0;
+            renderCurrentCard();
+            showNotification('🎲 Карточки перемешаны');
+        }
+
+        function toggleCard(cardElement) {
+            cardElement.classList.toggle('flipped');
+        }
+
+        function openEditModal() {
+            if (currentQueue.length === 0) return;
+            const card = currentQueue[currentCardIndex];
+            editingCardId = card.id;
+            
+            document.getElementById('editQuestion').value = card.question;
+            document.getElementById('editAnswer').value = card.answer;
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+            editingCardId = null;
+        }
+
+        function saveEditedCard(question, answer) {
+            const index = allCards.findIndex(c => c.id === editingCardId);
+            if (index !== -1) {
+                allCards[index] = { ...allCards[index], question, answer };
+                saveCards();
+                startNewRound();
+                closeEditModal();
+                showNotification('✏️ Карточка обновлена');
+            }
+        }
+
+        function deleteCurrentCard() {
+            if (currentQueue.length === 0) return;
+            const card = currentQueue[currentCardIndex];
+            
+            if (confirm('Вы уверены, что хотите удалить эту карточку?')) {
+                const indexInAll = allCards.findIndex(c => c.id === card.id);
+                if (indexInAll !== -1) allCards.splice(indexInAll, 1);
+                
+                saveCards();
+                startNewRound();
+                showNotification('🗑️ Карточка удалена');
+            }
+        }
+
+        document.getElementById('addCardForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const question = document.getElementById('question').value;
+            const answer = document.getElementById('answer').value;
+            
+            const newCard = {
+                id: nextId++,
+                question: question,
+                answer: answer
+            };
+            
+            allCards.push(newCard);
+            saveCards();
+            
+            document.getElementById('question').value = '';
+            document.getElementById('answer').value = '';
+            
+            startNewRound();
+            showNotification('➕ Карточка добавлена');
+        });
+
+        document.getElementById('importFile').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                importCards(e.target.files[0]);
+                e.target.value = '';
+            }
+        });
+
+        document.getElementById('editCardForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const question = document.getElementById('editQuestion').value;
+            const answer = document.getElementById('editAnswer').value;
+            
+            if (question && answer) {
+                saveEditedCard(question, answer);
+            } else {
+                alert('Пожалуйста, заполните оба поля');
+            }
+        });
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('editModal');
+            if (event.target === modal) {
+                closeEditModal();
+            }
+        };
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.remove();
+            }, 2000);
+        }
+
+        loadCards();
+    </script>
+</body>
+</html>
