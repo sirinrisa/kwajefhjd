@@ -161,12 +161,6 @@
             color: white;
         }
 
-        .btn-warning {
-            background: #ffc107;
-            border-color: #ffc107;
-            color: #333;
-        }
-
         .counter {
             text-align: center;
             color: #666;
@@ -269,41 +263,6 @@
             font-size: 0.85em;
         }
 
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            max-width: 500px;
-            width: 90%;
-            position: relative;
-        }
-
-        .close-modal {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            font-size: 24px;
-            cursor: pointer;
-            color: #999;
-        }
-
         .notification {
             position: fixed;
             bottom: 20px;
@@ -330,47 +289,26 @@
 </head>
 <body>
     <div class="container">
-        <h1>📚 Флэш-карточки</h1>
+        <h1>Флэш-карточки</h1>
         
         <div id="cardsContainer">
             <div class="empty-state">
-                <p>🔄 Загрузка карточек...</p>
+                <p>Загрузка карточек...</p>
             </div>
         </div>
         
         <div class="add-card-form">
-            <h2>➕ Добавить новую карточку</h2>
+            <h2>Добавить новую карточку</h2>
             <form id="addCardForm">
                 <div class="form-group">
-                    <label for="question">❓ Вопрос:</label>
+                    <label for="question">Вопрос:</label>
                     <input type="text" id="question" required placeholder="Введите вопрос...">
                 </div>
                 <div class="form-group">
-                    <label for="answer">💡 Ответ:</label>
+                    <label for="answer">Ответ:</label>
                     <textarea id="answer" required placeholder="Введите ответ..."></textarea>
                 </div>
-                <button type="submit">✨ Добавить карточку</button>
-            </form>
-        </div>
-    </div>
-
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal" onclick="closeEditModal()">&times;</span>
-            <h2>✏️ Редактировать карточку</h2>
-            <form id="editCardForm">
-                <div class="form-group">
-                    <label>Вопрос:</label>
-                    <input type="text" id="editQuestion" required>
-                </div>
-                <div class="form-group">
-                    <label>Ответ:</label>
-                    <textarea id="editAnswer" required rows="5"></textarea>
-                </div>
-                <div class="modal-buttons" style="display: flex; gap: 10px; margin-top: 20px;">
-                    <button type="button" class="btn" onclick="closeEditModal()">Отмена</button>
-                    <button type="submit" class="btn btn-primary">Сохранить</button>
-                </div>
+                <button type="submit">Добавить карточку</button>
             </form>
         </div>
     </div>
@@ -380,7 +318,6 @@
         let currentQueue = [];
         let unknownCards = [];
         let currentCardIndex = 0;
-        let editingCardId = null;
         let nextId = 1;
         
         const SESSION_KEY = 'flashcards_session';
@@ -440,12 +377,12 @@
                         allCards = data.cards;
                         nextId = Math.max(...allCards.map(c => c.id), 0) + 1;
                         saveCardsToLocal();
-                        showNotification('✅ Карточки загружены из questions.json');
+                        showNotification('Карточки загружены из questions.json');
                         return true;
                     }
                 }
             } catch (error) {
-                console.log('Файл questions.json не найден, используем стандартные карточки');
+                console.log('Файл questions.json не найден');
             }
             return false;
         }
@@ -482,19 +419,15 @@
         }
 
         async function initCards() {
-            // Сначала пытаемся загрузить из JSON файла
             const loadedFromJSON = await loadCardsFromJSON();
             
             if (!loadedFromJSON) {
-                // Если JSON нет, пробуем загрузить из localStorage
                 const loadedFromLocal = loadCardsFromLocal();
                 if (!loadedFromLocal) {
-                    // Если и там ничего нет, используем стандартные
                     setDefaultCards();
                 }
             }
             
-            // Пытаемся загрузить сохраненную сессию
             const sessionLoaded = loadSession();
             
             if (!sessionLoaded || currentQueue.length === 0) {
@@ -515,7 +448,7 @@
 
         function continueWithUnknown() {
             if (unknownCards.length === 0) {
-                showNotification('🎉 Поздравляем! Вы выучили все карточки! 🎉');
+                showNotification('Поздравляем! Вы выучили все карточки!');
                 renderComplete();
                 return;
             }
@@ -526,7 +459,7 @@
             unknownCards = [];
             saveSession();
             renderCurrentCard();
-            showNotification(`📚 Повторяем ${currentQueue.length} карточек, которые вы не знали`);
+            showNotification(`Повторяем ${currentQueue.length} карточек, которые вы не знали`);
         }
 
         function markAsKnown() {
@@ -540,13 +473,13 @@
                     currentCardIndex = 0;
                 }
                 renderCurrentCard();
-                showNotification('✅ Знаю! Карточка удалена из очереди');
+                showNotification('Знаю! Карточка удалена из очереди');
             } else {
                 if (unknownCards.length > 0) {
-                    showNotification('📖 Круг завершен! Переходим к повторению невыученных карточек');
+                    showNotification('Круг завершен! Переходим к повторению невыученных карточек');
                     continueWithUnknown();
                 } else {
-                    showNotification('🎉 Поздравляем! Вы выучили все карточки! 🎉');
+                    showNotification('Поздравляем! Вы выучили все карточки!');
                     renderComplete();
                 }
             }
@@ -570,13 +503,13 @@
                     currentCardIndex = 0;
                 }
                 renderCurrentCard();
-                showNotification('❌ Не знаю! Карточка отложена для повторения');
+                showNotification('Не знаю! Карточка отложена для повторения');
             } else {
                 if (unknownCards.length > 0) {
-                    showNotification('📖 Круг завершен! Переходим к повторению невыученных карточек');
+                    showNotification('Круг завершен! Переходим к повторению невыученных карточек');
                     continueWithUnknown();
                 } else {
-                    showNotification('🎉 Поздравляем! Вы выучили все карточки! 🎉');
+                    showNotification('Поздравляем! Вы выучили все карточки!');
                     renderComplete();
                 }
             }
@@ -588,7 +521,7 @@
             if (allCards.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
-                        <p>📭 Нет карточек</p>
+                        <p>Нет карточек</p>
                         <p style="font-size: 0.9em;">Добавьте свою первую карточку ниже</p>
                     </div>
                 `;
@@ -610,19 +543,19 @@
             container.innerHTML = `
                 <div class="stats">
                     <div class="stat-item">
-                        <span class="stat-label">📚 Всего:</span>
+                        <span class="stat-label">Всего:</span>
                         <span class="stat-value">${allCards.length}</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">✅ Выучено:</span>
+                        <span class="stat-label">Выучено:</span>
                         <span class="stat-value">${totalLearned}</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">🔄 В круге:</span>
+                        <span class="stat-label">В круге:</span>
                         <span class="stat-value">${currentQueue.length}</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">📝 На повторении:</span>
+                        <span class="stat-label">На повторении:</span>
                         <span class="stat-value">${unknownCards.length}</span>
                     </div>
                 </div>
@@ -633,34 +566,30 @@
                     <div class="card" onclick="toggleCard(this)">
                         <div class="card-inner">
                             <div class="card-front">
-                                <h3>❓ Вопрос</h3>
+                                <h3>Вопрос</h3>
                                 <p>${escapeHtml(card.question)}</p>
-                                <div class="flip-hint">👇 нажмите для ответа</div>
+                                <div class="flip-hint">нажмите для ответа</div>
                             </div>
                             <div class="card-back">
-                                <h3>💡 Ответ</h3>
+                                <h3>Ответ</h3>
                                 <p>${escapeHtml(card.answer)}</p>
-                                <div class="flip-hint">👇 нажмите для вопроса</div>
+                                <div class="flip-hint">нажмите для вопроса</div>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="controls">
-                    <button class="btn btn-success" onclick="markAsKnown()">✅ Знаю</button>
-                    <button class="btn btn-danger" onclick="markAsUnknown()">❌ Не знаю</button>
+                    <button class="btn btn-success" onclick="markAsKnown()">Знаю</button>
+                    <button class="btn btn-danger" onclick="markAsUnknown()">Не знаю</button>
                 </div>
                 <div class="controls">
-                    <button class="btn" onclick="shuffleCurrentQueue()">🎲 Перемешать</button>
-                    <button class="btn btn-warning" onclick="openEditModal()">✏️ Редактировать</button>
-                    <button class="btn" onclick="deleteCurrentCard()">🗑️ Удалить</button>
-                </div>
-                <div class="controls">
-                    <button class="btn btn-primary" onclick="startNewRound()">🔄 Начать заново</button>
+                    <button class="btn" onclick="shuffleCurrentQueue()">Перемешать</button>
+                    <button class="btn btn-primary" onclick="startNewRound()">Начать заново</button>
                 </div>
                 <div class="progress">
-                    💡 Кликните по карточке, чтобы перевернуть<br>
-                    ✅ Знаю - карточка уходит из текущего круга<br>
-                    ❌ Не знаю - карточка откладывается для повторения
+                    Кликните по карточке, чтобы перевернуть
+                    Знаю - карточка уходит из текущего круга
+                    Не знаю - карточка откладывается для повторения
                 </div>
             `;
         }
@@ -669,10 +598,10 @@
             const container = document.getElementById('cardsContainer');
             container.innerHTML = `
                 <div class="empty-state">
-                    <p>🎉 Поздравляю! 🎉</p>
+                    <p>Поздравляю!</p>
                     <p style="font-size: 1.2em; margin-top: 10px;">Вы выучили все ${allCards.length} карточек!</p>
                     <div class="controls" style="margin-top: 30px;">
-                        <button class="btn btn-primary" onclick="startNewRound()">🔄 Начать заново</button>
+                        <button class="btn btn-primary" onclick="startNewRound()">Начать заново</button>
                     </div>
                 </div>
             `;
@@ -686,51 +615,11 @@
             currentCardIndex = 0;
             saveSession();
             renderCurrentCard();
-            showNotification('🎲 Карточки перемешаны');
+            showNotification('Карточки перемешаны');
         }
 
         function toggleCard(cardElement) {
             cardElement.classList.toggle('flipped');
-        }
-
-        function openEditModal() {
-            if (currentQueue.length === 0) return;
-            const card = currentQueue[currentCardIndex];
-            editingCardId = card.id;
-            
-            document.getElementById('editQuestion').value = card.question;
-            document.getElementById('editAnswer').value = card.answer;
-            document.getElementById('editModal').classList.add('active');
-        }
-
-        function closeEditModal() {
-            document.getElementById('editModal').classList.remove('active');
-            editingCardId = null;
-        }
-
-        function saveEditedCard(question, answer) {
-            const index = allCards.findIndex(c => c.id === editingCardId);
-            if (index !== -1) {
-                allCards[index] = { ...allCards[index], question, answer };
-                saveCardsToLocal();
-                startNewRound();
-                closeEditModal();
-                showNotification('✏️ Карточка обновлена');
-            }
-        }
-
-        function deleteCurrentCard() {
-            if (currentQueue.length === 0) return;
-            const card = currentQueue[currentCardIndex];
-            
-            if (confirm('Вы уверены, что хотите удалить эту карточку?')) {
-                const indexInAll = allCards.findIndex(c => c.id === card.id);
-                if (indexInAll !== -1) allCards.splice(indexInAll, 1);
-                
-                saveCardsToLocal();
-                startNewRound();
-                showNotification('🗑️ Карточка удалена');
-            }
         }
 
         document.getElementById('addCardForm').addEventListener('submit', (e) => {
@@ -752,28 +641,8 @@
             document.getElementById('answer').value = '';
             
             startNewRound();
-            showNotification('➕ Карточка добавлена');
+            showNotification('Карточка добавлена');
         });
-
-        document.getElementById('editCardForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const question = document.getElementById('editQuestion').value;
-            const answer = document.getElementById('editAnswer').value;
-            
-            if (question && answer) {
-                saveEditedCard(question, answer);
-            } else {
-                alert('Пожалуйста, заполните оба поля');
-            }
-        });
-
-        window.onclick = function(event) {
-            const modal = document.getElementById('editModal');
-            if (event.target === modal) {
-                closeEditModal();
-            }
-        };
 
         function escapeHtml(text) {
             const div = document.createElement('div');
