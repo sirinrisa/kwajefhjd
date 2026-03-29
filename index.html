@@ -1,16 +1,22 @@
-<html>
+<!DOCTYPE html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Flashcards">
-    <title>Flashcards - Учебные карточки</title>
+    <title>Учебные карточки</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <h1>Флэш-карточки</h1>
+        
+        <div class="mode-switch">
+            <button class="mode-btn active" data-mode="learn">Режим изучения</button>
+            <button class="mode-btn" data-mode="list">Режим списка</button>
+        </div>
         
         <div id="cardsContainer">
             <div class="empty-state">
