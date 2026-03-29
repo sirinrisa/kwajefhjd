@@ -2,6 +2,7 @@ let allCards = [];
 let currentQueue = [];
 let unknownCards = [];
 let currentCardIndex = 0;
+let currentMode = 'learn';
 
 const SESSION_KEY = 'flashcards_session';
 const CARDS_KEY = 'flashcards_data';
@@ -10,7 +11,8 @@ function saveSession() {
     const sessionData = {
         unknownCardsIds: unknownCards.map(c => c.id),
         currentQueueIds: currentQueue.map(c => c.id),
-        currentCardIndex: currentCardIndex
+        currentCardIndex: currentCardIndex,
+        currentMode: currentMode
     };
     localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
 }
@@ -35,6 +37,9 @@ function loadSession() {
                 currentQueue = [...allCards];
                 shuffleArray(currentQueue);
                 currentCardIndex = 0;
+            }
+            if (sessionData.currentMode) {
+                currentMode = sessionData.currentMode;
             }
             return true;
         } catch (e) {
@@ -113,8 +118,10 @@ async function initCards() {
     if (!sessionLoaded || currentQueue.length === 0) {
         startNewRound();
     } else {
-        renderCurrentCard();
+        renderCurrentView();
     }
+    
+    updateModeButtons();
 }
 
 function startNewRound() {
@@ -123,7 +130,7 @@ function startNewRound() {
     currentCardIndex = 0;
     unknownCards = [];
     saveSession();
-    renderCurrentCard();
+    renderCurrentView();
 }
 
 function continueWithUnknown() {
@@ -138,21 +145,22 @@ function continueWithUnknown() {
     currentCardIndex = 0;
     unknownCards = [];
     saveSession();
-    renderCurrentCard();
+    renderCurrentView();
     showNotification(`Повторяем ${currentQueue.length} карточек, которые вы не знали`);
 }
 
 function markAsKnown() {
     if (currentQueue.length === 0) return;
+    if (currentMode !== 'learn') return;
     
     currentQueue.splice(currentCardIndex, 1);
     saveSession();
     
     if (currentQueue.length > 0) {
         if (currentCardIndex >= currentQueue.length) {
-            currentCardIndex = 0;
+            currentCardIndex = currentQueue.length - 1;
         }
-        renderCurrentCard();
+        renderCurrentView();
         showNotification('Знаю! Карточка удалена из очереди');
     } else {
         if (unknownCards.length > 0) {
@@ -167,6 +175,7 @@ function markAsKnown() {
 
 function markAsUnknown() {
     if (currentQueue.length === 0) return;
+    if (currentMode !== 'learn') return;
     
     const currentCard = currentQueue[currentCardIndex];
     
@@ -180,9 +189,9 @@ function markAsUnknown() {
     
     if (currentQueue.length > 0) {
         if (currentCardIndex >= currentQueue.length) {
-            currentCardIndex = 0;
+            currentCardIndex = currentQueue.length - 1;
         }
-        renderCurrentCard();
+        renderCurrentView();
         showNotification('Не знаю! Карточка отложена для повторения');
     } else {
         if (unknownCards.length > 0) {
@@ -195,7 +204,41 @@ function markAsUnknown() {
     }
 }
 
-function renderCurrentCard() {
+function goToPrevious() {
+    if (currentMode !== 'learn') return;
+    if (currentQueue.length === 0) return;
+    
+    if (currentCardIndex > 0) {
+        currentCardIndex--;
+        saveSession();
+        renderCurrentView();
+    } else {
+        showNotification('Это первая карточка в круге');
+    }
+}
+
+function goToNext() {
+    if (currentMode !== 'learn') return;
+    if (currentQueue.length === 0) return;
+    
+    if (currentCardIndex < currentQueue.length - 1) {
+        currentCardIndex++;
+        saveSession();
+        renderCurrentView();
+    } else {
+        showNotification('Это последняя карточка в круге');
+    }
+}
+
+function renderCurrentView() {
+    if (currentMode === 'learn') {
+        renderLearnMode();
+    } else {
+        renderListMode();
+    }
+}
+
+function renderLearnMode() {
     const container = document.getElementById('cardsContainer');
     
     if (allCards.length === 0) {
@@ -258,8 +301,10 @@ function renderCurrentCard() {
             </div>
         </div>
         <div class="controls">
+            <button class="btn" onclick="goToPrevious()">Назад</button>
             <button class="btn btn-success" onclick="markAsKnown()">Знаю</button>
             <button class="btn btn-danger" onclick="markAsUnknown()">Не знаю</button>
+            <button class="btn" onclick="goToNext()">Вперёд</button>
         </div>
         <div class="controls">
             <button class="btn" onclick="shuffleCurrentQueue()">Перемешать</button>
@@ -269,6 +314,45 @@ function renderCurrentCard() {
             Кликните по карточке, чтобы перевернуть<br>
             Знаю - карточка уходит из текущего круга<br>
             Не знаю - карточка откладывается для повторения
+        </div>
+    `;
+}
+
+function renderListMode() {
+    const container = document.getElementById('cardsContainer');
+    
+    if (allCards.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <p>Нет карточек</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let cardsHtml = '';
+    for (let i = 0; i < allCards.length; i++) {
+        const card = allCards[i];
+        cardsHtml += `
+            <div class="list-card" onclick="toggleListCard(this)">
+                <div class="list-card-question">
+                    <h4>Вопрос ${i + 1}</h4>
+                    <p>${escapeHtml(card.question)}</p>
+                </div>
+                <div class="list-card-answer">
+                    <h4>Ответ ${i + 1}</h4>
+                    <p>${escapeHtml(card.answer)}</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = `
+        <div class="list-header">
+            <p>Всего карточек: ${allCards.length} (нажмите на карточку, чтобы увидеть ответ)</p>
+        </div>
+        <div class="list-view">
+            ${cardsHtml}
         </div>
     `;
 }
@@ -287,18 +371,41 @@ function renderComplete() {
 }
 
 function shuffleCurrentQueue() {
+    if (currentMode !== 'learn') return;
     for (let i = currentQueue.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [currentQueue[i], currentQueue[j]] = [currentQueue[j], currentQueue[i]];
     }
     currentCardIndex = 0;
     saveSession();
-    renderCurrentCard();
+    renderCurrentView();
     showNotification('Карточки перемешаны');
 }
 
 function toggleCard(cardElement) {
     cardElement.classList.toggle('flipped');
+}
+
+function toggleListCard(cardElement) {
+    cardElement.classList.toggle('flipped');
+}
+
+function setMode(mode) {
+    currentMode = mode;
+    saveSession();
+    renderCurrentView();
+    updateModeButtons();
+}
+
+function updateModeButtons() {
+    const btns = document.querySelectorAll('.mode-btn');
+    btns.forEach(btn => {
+        if (btn.dataset.mode === currentMode) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
 }
 
 function escapeHtml(text) {
@@ -316,5 +423,11 @@ function showNotification(message) {
         notification.remove();
     }, 2000);
 }
+
+document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        setMode(btn.dataset.mode);
+    });
+});
 
 initCards();
