@@ -3,6 +3,12 @@ let currentQueue = [];
 let unknownCards = [];
 let currentCardIndex = 0;
 let currentMode = 'learn';
+let initialTotal = 0;
+
+let historyStack = []; 
+let startX = 0;
+let currentX = 0;
+let isDragging = false;
 
 const SESSION_KEY = 'flashcards_session';
 const CARDS_KEY = 'flashcards_data';
@@ -12,7 +18,8 @@ function saveSession() {
         unknownCardsIds: unknownCards.map(c => c.id),
         currentQueueIds: currentQueue.map(c => c.id),
         currentCardIndex: currentCardIndex,
-        currentMode: currentMode
+        currentMode: currentMode,
+        initialTotal: initialTotal
     };
     localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
 }
@@ -41,6 +48,10 @@ function loadSession() {
             if (sessionData.currentMode) {
                 currentMode = sessionData.currentMode;
             }
+            if (sessionData.initialTotal) {
+                initialTotal = sessionData.initialTotal;
+            }
+
             return true;
         } catch (e) {
             return false;
@@ -105,22 +116,22 @@ function setDefaultCards() {
 
 async function initCards() {
     const loadedFromJSON = await loadCardsFromJSON();
-    
+
     if (!loadedFromJSON) {
         const loadedFromLocal = loadCardsFromLocal();
         if (!loadedFromLocal) {
             setDefaultCards();
         }
     }
-    
+
     const sessionLoaded = loadSession();
-    
+
     if (!sessionLoaded || currentQueue.length === 0) {
         startNewRound();
     } else {
         renderCurrentView();
     }
-    
+
     updateModeButtons();
 }
 
@@ -129,6 +140,9 @@ function startNewRound() {
     shuffleArray(currentQueue);
     currentCardIndex = 0;
     unknownCards = [];
+
+    initialTotal = currentQueue.length;
+
     saveSession();
     renderCurrentView();
 }
@@ -139,23 +153,45 @@ function continueWithUnknown() {
         renderComplete();
         return;
     }
-    
+
     currentQueue = [...unknownCards];
     shuffleArray(currentQueue);
     currentCardIndex = 0;
     unknownCards = [];
+
+    initialTotal = currentQueue.length;
+
     saveSession();
     renderCurrentView();
-    showNotification(`Повторяем ${currentQueue.length} карточек, которые вы не знали`);
+}
+
+function getLearnedCount() {
+    const allCardIds = new Set(allCards.map(c => c.id));
+    const unknownIds = new Set(unknownCards.map(c => c.id));
+    const currentQueueIds = new Set(currentQueue.map(c => c.id));
+
+    let learned = 0;
+    for (const card of allCards) {
+        if (!unknownIds.has(card.id) && !currentQueueIds.has(card.id)) {
+            learned++;
+        }
+    }
+    return learned;
 }
 
 function markAsKnown() {
     if (currentQueue.length === 0) return;
     if (currentMode !== 'learn') return;
-    
+
+    historyStack.push({
+        card: currentQueue[currentCardIndex],
+        index: currentCardIndex,
+        type: 'known'
+    });
+
     currentQueue.splice(currentCardIndex, 1);
     saveSession();
-    
+
     if (currentQueue.length > 0) {
         if (currentCardIndex >= currentQueue.length) {
             currentCardIndex = currentQueue.length - 1;
@@ -176,17 +212,23 @@ function markAsKnown() {
 function markAsUnknown() {
     if (currentQueue.length === 0) return;
     if (currentMode !== 'learn') return;
-    
+
     const currentCard = currentQueue[currentCardIndex];
-    
+
+    historyStack.push({
+        card: currentCard,
+        index: currentCardIndex,
+        type: 'unknown'
+    });
+
     const isAlreadyInUnknown = unknownCards.some(card => card.id === currentCard.id);
     if (!isAlreadyInUnknown) {
         unknownCards.push(currentCard);
     }
-    
+
     currentQueue.splice(currentCardIndex, 1);
     saveSession();
-    
+
     if (currentQueue.length > 0) {
         if (currentCardIndex >= currentQueue.length) {
             currentCardIndex = currentQueue.length - 1;
@@ -206,21 +248,29 @@ function markAsUnknown() {
 
 function goToPrevious() {
     if (currentMode !== 'learn') return;
-    if (currentQueue.length === 0) return;
-    
-    if (currentCardIndex > 0) {
-        currentCardIndex--;
-        saveSession();
-        renderCurrentView();
-    } else {
+
+    if (historyStack.length === 0) {
         showNotification('Это первая карточка в круге');
+        return;
     }
+
+    const last = historyStack.pop();
+
+    currentQueue.splice(last.index, 0, last.card);
+    currentCardIndex = last.index;
+
+    if (last.type === 'unknown') {
+        unknownCards = unknownCards.filter(c => c.id !== last.card.id);
+    }
+
+    saveSession();
+    renderCurrentView();
 }
 
 function goToNext() {
     if (currentMode !== 'learn') return;
     if (currentQueue.length === 0) return;
-    
+
     if (currentCardIndex < currentQueue.length - 1) {
         currentCardIndex++;
         saveSession();
@@ -238,9 +288,14 @@ function renderCurrentView() {
     }
 }
 
+function formatText(text) {
+    if (!text) return '';
+    return escapeHtml(text).replace(/\n/g, '<br>');
+}
+
 function renderLearnMode() {
     const container = document.getElementById('cardsContainer');
-    
+
     if (allCards.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
@@ -249,7 +304,7 @@ function renderLearnMode() {
         `;
         return;
     }
-    
+
     if (currentQueue.length === 0) {
         if (unknownCards.length === 0) {
             renderComplete();
@@ -258,10 +313,10 @@ function renderLearnMode() {
         }
         return;
     }
-    
+
     const card = currentQueue[currentCardIndex];
-    const totalLearned = allCards.length - unknownCards.length - (currentQueue.length - 1);
-    
+    const learnedCount = getLearnedCount();
+
     container.innerHTML = `
         <div class="stats">
             <div class="stat-item">
@@ -270,7 +325,7 @@ function renderLearnMode() {
             </div>
             <div class="stat-item">
                 <span class="stat-label">Выучено:</span>
-                <span class="stat-value">${totalLearned}</span>
+                <span class="stat-value">${learnedCount}</span>
             </div>
             <div class="stat-item">
                 <span class="stat-label">В круге:</span>
@@ -282,19 +337,19 @@ function renderLearnMode() {
             </div>
         </div>
         <div class="counter">
-            Карточка ${currentCardIndex + 1} из ${currentQueue.length}
+            Карточка ${initialTotal - currentQueue.length + currentCardIndex + 1} из ${initialTotal}
         </div>
         <div class="card-wrapper">
             <div class="card" onclick="toggleCard(this)">
                 <div class="card-inner">
                     <div class="card-front">
                         <h3>Вопрос</h3>
-                        <p>${escapeHtml(card.question)}</p>
+                        <p>${formatText(card.question)}</p>
                         <div class="flip-hint">нажмите для ответа</div>
                     </div>
                     <div class="card-back">
                         <h3>Ответ</h3>
-                        <p>${escapeHtml(card.answer)}</p>
+                        <p>${formatText(card.answer)}</p>
                         <div class="flip-hint">нажмите для вопроса</div>
                     </div>
                 </div>
@@ -320,7 +375,7 @@ function renderLearnMode() {
 
 function renderListMode() {
     const container = document.getElementById('cardsContainer');
-    
+
     if (allCards.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
@@ -329,7 +384,7 @@ function renderListMode() {
         `;
         return;
     }
-    
+
     let cardsHtml = '';
     for (let i = 0; i < allCards.length; i++) {
         const card = allCards[i];
@@ -337,16 +392,16 @@ function renderListMode() {
             <div class="list-card" onclick="toggleListCard(this)">
                 <div class="list-card-question">
                     <h4>Вопрос ${i + 1}</h4>
-                    <p>${escapeHtml(card.question)}</p>
+                    <p>${formatText(card.question)}</p>
                 </div>
                 <div class="list-card-answer">
                     <h4>Ответ ${i + 1}</h4>
-                    <p>${escapeHtml(card.answer)}</p>
+                    <p>${formatText(card.answer)}</p>
                 </div>
             </div>
         `;
     }
-    
+
     container.innerHTML = `
         <div class="list-header">
             <p>Всего карточек: ${allCards.length} (нажмите на карточку, чтобы увидеть ответ)</p>
